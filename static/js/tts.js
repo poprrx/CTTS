@@ -3,8 +3,41 @@ class TTSManager {
     constructor() {
         this.apiUrl = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate';
         this.currentAudioBlob = null;
+        this.testMode = false;
         this.initializeEventListeners();
         this.initializeTooltips();
+        this.checkBackendStatus();
+    }
+
+    async checkBackendStatus() {
+        try {
+            // Quick health check to the backend
+            const response = await fetch(this.apiUrl, {
+                method: 'HEAD',
+                mode: 'cors'
+            });
+            
+            if (!response.ok && response.status !== 405) {
+                this.showBackendWarning();
+            }
+        } catch (error) {
+            this.showBackendWarning();
+        }
+    }
+
+    showBackendWarning() {
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'backendWarning';
+        warningDiv.className = 'alert alert-warning mb-4';
+        warningDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Backend Service Notice:</strong> The F5-TTS backend service appears to be unavailable. 
+            Please ensure the RunPod instance is running and accessible.
+        `;
+        
+        const container = document.querySelector('.container .row .col-lg-8');
+        const card = container.querySelector('.card');
+        container.insertBefore(warningDiv, card);
     }
 
     initializeEventListeners() {
@@ -47,25 +80,43 @@ class TTSManager {
             formData.append('gen_text', document.getElementById('genText').value);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', document.getElementById('voiceName').value);
-            formData.append('speed', document.getElementById('speedSlider').value);
+            formData.append('speed', parseFloat(document.getElementById('speedSlider').value));
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
                 gen_text: document.getElementById('genText').value,
                 ref_text: document.getElementById('refText').value,
                 voice_name: document.getElementById('voiceName').value,
-                speed: document.getElementById('speedSlider').value
+                speed: parseFloat(document.getElementById('speedSlider').value)
             });
 
-            // Make API request
+            // Make API request with proper headers for CORS
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/octet-stream, audio/wav, audio/*'
+                },
                 body: formData
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Server responded with ${response.status}: ${errorText}`);
+                let errorText;
+                try {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorText = errorData.detail || errorData.message || JSON.stringify(errorData);
+                    } else {
+                        errorText = await response.text();
+                    }
+                } catch (e) {
+                    errorText = `HTTP ${response.status} ${response.statusText}`;
+                }
+                throw new Error(`Server error (${response.status}): ${errorText}`);
             }
 
             // Get audio blob
@@ -82,7 +133,18 @@ class TTSManager {
 
         } catch (error) {
             console.error('Error generating voice:', error);
-            this.showError(`Failed to generate voice: ${error.message}`);
+            let errorMessage = error.message;
+            
+            // Handle specific error types
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Unable to connect to the voice generation service. Please verify the F5-TTS backend is running on RunPod.';
+            } else if (error.message.includes('CORS')) {
+                errorMessage = 'Cross-origin request blocked. The backend needs CORS configuration.';
+            } else if (error.message.includes('500')) {
+                errorMessage = 'The F5-TTS backend encountered an internal error. Please check the RunPod service logs.';
+            }
+            
+            this.showError(errorMessage);
         } finally {
             this.hideLoading();
         }
