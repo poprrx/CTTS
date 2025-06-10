@@ -123,16 +123,22 @@ class TTSManager {
             this.showAudioSection();
 
         } catch (error) {
-            console.error('Error generating voice:', error);
-            let errorMessage = error.message;
+            console.error('Full error details:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            
+            let errorMessage = error.message || 'Unknown error occurred';
             
             // Handle specific error types
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                errorMessage = 'Unable to connect to the voice generation service. Please verify the F5-TTS backend is running on RunPod.';
+                errorMessage = 'Network connection failed. Check if F5-TTS backend is accessible.';
             } else if (error.message.includes('CORS')) {
-                errorMessage = 'Cross-origin request blocked. The backend needs CORS configuration.';
+                errorMessage = 'Cross-origin request blocked. Backend needs CORS configuration.';
             } else if (error.message.includes('500')) {
-                errorMessage = 'The F5-TTS backend encountered an internal error. Please check the RunPod service logs.';
+                errorMessage = 'F5-TTS backend internal error. Check RunPod service logs.';
+            } else if (error.name === 'TypeError') {
+                errorMessage = `Network or parsing error: ${error.message}`;
             }
             
             this.showError(errorMessage);
