@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F5-TTS Voice Generator</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container my-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="text-center">
+                    <h1 class="display-4 mb-2">
+                        <i class="fas fa-microphone-alt text-info me-3"></i>
+                        F5-TTS Voice Generator
+                    </h1>
+                    <p class="lead text-muted">Professional text-to-speech with SSML support</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            Voice Generation Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="ttsForm">
+                            <!-- Text Input -->
+                            <div class="mb-4">
+                                <label for="genText" class="form-label">
+                                    <i class="fas fa-edit me-2"></i>
+                                    Text to Generate
+                                    <span class="text-info" data-bs-toggle="tooltip" title="Use SSML tags like &lt;break time='1s'/&gt; for pauses">
+                                        <i class="fas fa-question-circle"></i>
+                                    </span>
+                                </label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="genText" 
+                                    rows="4" 
+                                    placeholder="Enter the text you want to convert to speech. Use SSML tags like &lt;break time='1s'/&gt; for pauses."
+                                    required></textarea>
+                                
+                                <!-- SSML Helper Buttons -->
+                                <div class="mt-2">
+                                    <small class="text-muted me-3">Quick SSML:</small>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="insertSSML('0.5s')">
+                                        0.5s Pause
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="insertSSML('1s')">
+                                        1s Pause
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertSSML('2s')">
+                                        2s Pause
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Reference Text -->
+                            <div class="mb-4">
+                                <label for="refText" class="form-label">
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    Reference Transcript
+                                </label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="refText" 
+                                    rows="3" 
+                                    placeholder="Enter the reference transcript that matches your voice sample"
+                                    required></textarea>
+                            </div>
+
+                            <!-- Voice Name -->
+                            <div class="mb-4">
+                                <label for="voiceName" class="form-label">
+                                    <i class="fas fa-user me-2"></i>
+                                    Voice Name
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="voiceName" 
+                                    placeholder="e.g., about_star_trek"
+                                    required>
+                                <div class="form-text">Base name of the voice file on the server (without extension)</div>
+                            </div>
+
+                            <!-- Speed Control -->
+                            <div class="mb-4">
+                                <label for="speedSlider" class="form-label">
+                                    <i class="fas fa-tachometer-alt me-2"></i>
+                                    Speed: <span id="speedValue">1.0</span>x
+                                </label>
+                                <input 
+                                    type="range" 
+                                    class="form-range" 
+                                    id="speedSlider" 
+                                    min="0.5" 
+                                    max="1.5" 
+                                    step="0.1" 
+                                    value="1.0">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">0.5x (Slow)</small>
+                                    <small class="text-muted">1.5x (Fast)</small>
+                                </div>
+                            </div>
+
+                            <!-- Volume Control -->
+                            <div class="mb-4">
+                                <label for="volumeSlider" class="form-label">
+                                    <i class="fas fa-volume-up me-2"></i>
+                                    Volume: <span id="volumeValue">100</span>%
+                                </label>
+                                <input 
+                                    type="range" 
+                                    class="form-range" 
+                                    id="volumeSlider" 
+                                    min="0" 
+                                    max="100" 
+                                    value="100">
+                            </div>
+
+                            <!-- Generate Button -->
+                            <div class="d-grid mb-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                                    <i class="fas fa-magic me-2"></i>
+                                    Generate Voice
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Loading State -->
+                        <div id="loadingState" class="text-center d-none">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted">Generating voice... This may take a few moments.</p>
+                        </div>
+
+                        <!-- Audio Player Section -->
+                        <div id="audioSection" class="d-none">
+                            <hr>
+                            <h6 class="mb-3">
+                                <i class="fas fa-play-circle me-2"></i>
+                                Generated Audio
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <audio id="audioPlayer" controls class="w-100">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <a id="downloadBtn" class="btn btn-success" download="generated_voice.mp3">
+                                    <i class="fas fa-download me-2"></i>
+                                    Download MP3
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div id="errorAlert" class="alert alert-danger d-none" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="errorMessage"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-info-circle me-2"></i>
+                            SSML Support
+                        </h6>
+                        <p class="card-text small text-muted mb-0">
+                            You can use SSML tags in your text for better control:
+                            <br>
+                            <code>&lt;break time="1s"/&gt;</code> - Insert a 1-second pause
+                            <br>
+                            <code>&lt;break time="500ms"/&gt;</code> - Insert a 500-millisecond pause
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/tts.js') }}"></script>
+</body>
+</html>

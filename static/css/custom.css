@@ -1,0 +1,165 @@
+/* Custom styles for F5-TTS Voice Generator */
+
+/* Ensure proper spacing and responsive behavior */
+.container {
+    max-width: 1200px;
+}
+
+/* Card styling enhancements */
+.card {
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-body-bg);
+}
+
+.card-header {
+    background-color: var(--bs-secondary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Form styling */
+.form-control, .form-select {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Range slider styling */
+.form-range {
+    cursor: pointer;
+}
+
+.form-range::-webkit-slider-thumb {
+    background-color: var(--bs-primary);
+}
+
+.form-range::-moz-range-thumb {
+    background-color: var(--bs-primary);
+    border: none;
+}
+
+/* Button styling */
+.btn {
+    font-weight: 500;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--bs-secondary);
+    --bs-btn-border-color: var(--bs-secondary);
+}
+
+.btn-outline-secondary:hover {
+    --bs-btn-hover-bg: var(--bs-secondary);
+    --bs-btn-hover-border-color: var(--bs-secondary);
+}
+
+/* Audio player styling */
+audio {
+    background-color: var(--bs-secondary-bg);
+    border-radius: var(--bs-border-radius);
+}
+
+/* Loading animation */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive text areas */
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* SSML helper buttons */
+.btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Alert styling */
+.alert {
+    border: 1px solid var(--bs-border-color);
+}
+
+.alert-danger {
+    --bs-alert-bg: rgba(var(--bs-danger-rgb), 0.1);
+    --bs-alert-border-color: var(--bs-danger);
+    --bs-alert-color: var(--bs-danger);
+}
+
+/* Icon spacing */
+.fas, .far {
+    width: 1.2em;
+    text-align: center;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+    }
+}
+
+/* Dark theme consistency */
+[data-bs-theme="dark"] .bg-dark {
+    background-color: var(--bs-gray-900) !important;
+}
+
+[data-bs-theme="dark"] .border-secondary {
+    border-color: var(--bs-gray-700) !important;
+}
+
+/* Ensure proper contrast for code elements */
+code {
+    background-color: var(--bs-secondary-bg);
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+}
+
+/* Smooth transitions */
+.btn, .form-control, .form-select, .form-range {
+    transition: all 0.15s ease-in-out;
+}
+
+/* Focus states for accessibility */
+.btn:focus,
+.form-control:focus,
+.form-select:focus,
+.form-range:focus {
+    outline: none;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-secondary-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bs-border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-secondary);
+}
