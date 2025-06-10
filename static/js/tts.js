@@ -10,19 +10,9 @@ class TTSManager {
     }
 
     async checkBackendStatus() {
-        try {
-            // Quick health check to the backend
-            const response = await fetch(this.apiUrl, {
-                method: 'HEAD',
-                mode: 'cors'
-            });
-            
-            if (!response.ok && response.status !== 405) {
-                this.showBackendWarning();
-            }
-        } catch (error) {
-            this.showBackendWarning();
-        }
+        // Skip status check since HEAD method returns 405 on working F5-TTS backend
+        // The backend will be tested when user actually tries to generate voice
+        console.log('F5-TTS backend configured at:', this.apiUrl);
     }
 
     showBackendWarning() {
