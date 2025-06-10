@@ -91,7 +91,8 @@ class TTSManager {
             });
 
             console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            console.log('Response content-type:', response.headers.get('content-type'));
 
             if (!response.ok) {
                 let errorText;

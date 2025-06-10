@@ -1,0 +1,84 @@
+(f5-tts-env) root@6d1459742328:/workspace/F5-TTS# uvicorn api:app --host 0.0.0.0 --port 7860
+INFO:     Started server process [3969]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:7860 (Press CTRL+C to quit)
+/usr/local/lib/python3.10/dist-packages/pydub/utils.py:170: RuntimeWarning: Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work
+  warn("Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work", RuntimeWarning)
+/usr/local/lib/python3.10/dist-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/usr/local/lib/python3.10/dist-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+Download Vocos from huggingface charactr/vocos-mel-24khz
+Using F5TTS_v1_Base...
+
+vocab :  /usr/local/lib/python3.10/dist-packages/f5_tts/infer/examples/vocab.txt
+token :  custom
+model :  /root/.cache/huggingface/hub/models--SWivid--F5-TTS/snapshots/84e5a410d9cead4de2f847e7c9369a6440bdfaca/F5TTS_v1_Base/model_1250000.safetensors 
+
+Voice: main
+ref_audio  wavs/about_star_trek.wav
+Converting audio...
+Using custom reference text...
+
+ref_text   About Star Trek Voyager. Star Trek Voyager is an American science fiction television series created by Rick Berman, Michael Piller, and Jeri Taylor. 
+ref_audio_ /tmp/tmp_445ring.wav 
+
+
+No voice tag found, using main.
+Voice: main
+gen_text 0 Hi, this is a test voice from Courtney
+
+
+Generating audio in 1 batches...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:02<00:00,  2.62s/it]
+tests/results/about_star_trek_7755b300.wav
+INFO:     100.64.0.31:44832 - "POST /generate HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/dist-packages/starlette/responses.py", line 343, in __call__
+    stat_result = await anyio.to_thread.run_sync(os.stat, self.path)
+  File "/usr/local/lib/python3.10/dist-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/usr/local/lib/python3.10/dist-packages/anyio/_backends/_asyncio.py", line 2106, in run_sync_in_worker_thread
+    return await future
+  File "/usr/local/lib/python3.10/dist-packages/anyio/_backends/_asyncio.py", line 833, in run
+    result = context.run(func, *args)
+FileNotFoundError: [Errno 2] No such file or directory: 'results/about_star_trek_7755b300.wav'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/dist-packages/uvicorn/protocols/http/h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/dist-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/middleware/errors.py", line 187, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/dist-packages/starlette/middleware/errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/dist-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/dist-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/routing.py", line 74, in app
+    await response(scope, receive, send)
+  File "/usr/local/lib/python3.10/dist-packages/starlette/responses.py", line 346, in __call__
+    raise RuntimeError(f"File at path {self.path} does not exist.")
+RuntimeError: File at path results/about_star_trek_7755b300.wav does not exist.
