@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F5-TTS Voice Generator</title>
+    <title>Courtney Text to Speech</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
@@ -16,9 +16,9 @@
                 <div class="text-center">
                     <h1 class="display-4 mb-2">
                         <i class="fas fa-microphone-alt text-info me-3"></i>
-                        F5-TTS Voice Generator
+                        Courtney Text to Speech
                     </h1>
-                    <p class="lead text-muted">Professional text-to-speech with SSML support</p>
+                    <p class="lead text-muted">Professional voice cloning with SSML support</p>
                 </div>
             </div>
         </div>
@@ -66,11 +66,19 @@
                                 </div>
                             </div>
 
+                            <!-- Voice Selection -->
+                            <div class="mb-4">
+                                <label for="voiceSelect" class="form-label">
+                                    <i class="fas fa-user me-2"></i>
+                                    Voice
+                                </label>
+                                <select class="form-select" id="voiceSelect" required>
+                                    <option value="about_star_trek" selected>Courtney Reyes</option>
+                                </select>
+                            </div>
+
                             <!-- Hidden Reference Text -->
                             <input type="hidden" id="refText" value="About Star Trek Voyager. Star Trek Voyager is an American science fiction television series created by Rick Berman, Michael Piller, and Jeri Taylor.">
-
-                            <!-- Hidden Voice Name -->
-                            <input type="hidden" id="voiceName" value="about_star_trek">
 
                             <!-- Speed Control -->
                             <div class="mb-4">

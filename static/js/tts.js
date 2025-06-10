@@ -69,14 +69,14 @@ class TTSManager {
             const formData = new FormData();
             formData.append('gen_text', document.getElementById('genText').value);
             formData.append('ref_text', document.getElementById('refText').value);
-            formData.append('voice_name', document.getElementById('voiceName').value);
+            formData.append('voice_name', document.getElementById('voiceSelect').value);
             formData.append('speed', parseFloat(document.getElementById('speedSlider').value));
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
                 gen_text: document.getElementById('genText').value,
                 ref_text: document.getElementById('refText').value,
-                voice_name: document.getElementById('voiceName').value,
+                voice_name: document.getElementById('voiceSelect').value,
                 speed: parseFloat(document.getElementById('speedSlider').value)
             });
 
