@@ -66,34 +66,11 @@
                                 </div>
                             </div>
 
-                            <!-- Reference Text -->
-                            <div class="mb-4">
-                                <label for="refText" class="form-label">
-                                    <i class="fas fa-file-alt me-2"></i>
-                                    Reference Transcript
-                                </label>
-                                <textarea 
-                                    class="form-control" 
-                                    id="refText" 
-                                    rows="3" 
-                                    placeholder="Enter the reference transcript that matches your voice sample"
-                                    required></textarea>
-                            </div>
+                            <!-- Hidden Reference Text -->
+                            <input type="hidden" id="refText" value="About Star Trek Voyager. Star Trek Voyager is an American science fiction television series created by Rick Berman, Michael Piller, and Jeri Taylor.">
 
-                            <!-- Voice Name -->
-                            <div class="mb-4">
-                                <label for="voiceName" class="form-label">
-                                    <i class="fas fa-user me-2"></i>
-                                    Voice Name
-                                </label>
-                                <input 
-                                    type="text" 
-                                    class="form-control" 
-                                    id="voiceName" 
-                                    placeholder="e.g., about_star_trek"
-                                    required>
-                                <div class="form-text">Base name of the voice file on the server (without extension)</div>
-                            </div>
+                            <!-- Hidden Voice Name -->
+                            <input type="hidden" id="voiceName" value="about_star_trek">
 
                             <!-- Speed Control -->
                             <div class="mb-4">
