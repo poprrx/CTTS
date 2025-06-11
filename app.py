@@ -43,15 +43,31 @@ def index():
 def get_generations():
     """Get generation history"""
     try:
-        generations = VoiceGeneration.query.order_by(VoiceGeneration.created_at.desc()).limit(20).all()
-        return jsonify([{
-            'id': gen.id,
-            'text': gen.text_input,
-            'voice': gen.voice_name,
-            'speed': gen.speed,
-            'created_at': gen.created_at.isoformat(),
-            'status': gen.status
-        } for gen in generations])
+        # Get page and limit from query parameters
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 5))  # Default to 5 items
+        
+        # Calculate offset
+        offset = (page - 1) * limit
+        
+        # Get total count and paginated results
+        total = VoiceGeneration.query.count()
+        generations = VoiceGeneration.query.order_by(VoiceGeneration.created_at.desc()).offset(offset).limit(limit).all()
+        
+        return jsonify({
+            'generations': [{
+                'id': gen.id,
+                'text': gen.text_input,
+                'voice': gen.voice_name,
+                'speed': gen.speed,
+                'created_at': gen.created_at.isoformat(),
+                'status': gen.status
+            } for gen in generations],
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'has_more': offset + limit < total
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
