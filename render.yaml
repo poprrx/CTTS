@@ -2,8 +2,8 @@ services:
   - type: web
     name: courtney-tts
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --reuse-port --reload main:app
+    buildCommand: pip install -r requirements_render.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --reuse-port main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.10
@@ -13,10 +13,8 @@ services:
         fromDatabase:
           name: courtney-tts-db
           property: connectionString
-    
-  - type: pserv
-    name: courtney-tts-db
-    env: postgresql
-    plan: free
+
+databases:
+  - name: courtney-tts-db
     databaseName: courtney_tts
-    databaseUser: courtney_user
+    user: courtney_user
