@@ -7,6 +7,7 @@ class TTSManager {
         this.initializeEventListeners();
         this.initializeTooltips();
         this.checkBackendStatus();
+        this.loadHistory();
     }
 
     async checkBackendStatus() {
@@ -153,6 +154,9 @@ class TTSManager {
                 },
                 body: JSON.stringify({status: 'completed'})
             });
+            
+            // Refresh history after successful generation
+            this.loadHistory();
 
         } catch (error) {
             // Update generation status to failed
@@ -247,6 +251,56 @@ class TTSManager {
 
     hideError() {
         document.getElementById('errorAlert').classList.add('d-none');
+    }
+
+    async loadHistory() {
+        try {
+            const response = await fetch('/api/generations');
+            const generations = await response.json();
+            
+            const historyLoading = document.getElementById('historyLoading');
+            const historyContent = document.getElementById('historyContent');
+            const historyList = document.getElementById('historyList');
+            const noHistory = document.getElementById('noHistory');
+            
+            historyLoading.classList.add('d-none');
+            historyContent.classList.remove('d-none');
+            
+            if (generations.length === 0) {
+                noHistory.classList.remove('d-none');
+                historyList.innerHTML = '';
+            } else {
+                noHistory.classList.add('d-none');
+                historyList.innerHTML = generations.map(gen => {
+                    const createdAt = new Date(gen.created_at).toLocaleString();
+                    const statusIcon = gen.status === 'completed' ? 'fas fa-check-circle text-success' :
+                                     gen.status === 'failed' ? 'fas fa-times-circle text-danger' :
+                                     'fas fa-clock text-warning';
+                    
+                    const truncatedText = gen.text.length > 100 ? 
+                        gen.text.substring(0, 100) + '...' : gen.text;
+                    
+                    return `
+                        <div class="border-bottom border-secondary pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="small text-muted mb-1">
+                                        <i class="${statusIcon} me-1"></i>
+                                        ${createdAt} • ${gen.voice} • Speed: ${gen.speed}x
+                                    </div>
+                                    <div class="text-light">${truncatedText}</div>
+                                </div>
+                                <span class="badge bg-secondary ms-2">${gen.status}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('Error loading history:', error);
+            const historyLoading = document.getElementById('historyLoading');
+            historyLoading.innerHTML = '<div class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading history</div>';
+        }
     }
 }
 
