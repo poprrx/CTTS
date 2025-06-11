@@ -7,7 +7,6 @@ class TTSManager {
         this.initializeEventListeners();
         this.initializeTooltips();
         this.checkBackendStatus();
-        this.loadHistory();
     }
 
     async checkBackendStatus() {
@@ -155,8 +154,7 @@ class TTSManager {
                 body: JSON.stringify({status: 'completed'})
             });
             
-            // Refresh history after successful generation
-            this.loadHistory();
+
 
         } catch (error) {
             // Update generation status to failed
