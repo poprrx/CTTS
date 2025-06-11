@@ -66,11 +66,34 @@ class TTSManager {
             this.hideAudioSection();
 
             // Collect form data
+            const genText = document.getElementById('genText').value;
+            const voiceName = document.getElementById('voiceSelect').value;
+            const speed = parseFloat(document.getElementById('speedSlider').value);
+            
+            // Save generation to database before starting
+            const generationData = {
+                text_input: genText,
+                voice_name: voiceName,
+                speed: speed,
+                status: 'pending'
+            };
+            
+            const saveResponse = await fetch('/api/generations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(generationData)
+            });
+            
+            const saveResult = await saveResponse.json();
+            const generationId = saveResult.id;
+
             const formData = new FormData();
-            formData.append('gen_text', document.getElementById('genText').value);
+            formData.append('gen_text', genText);
             formData.append('ref_text', document.getElementById('refText').value);
-            formData.append('voice_name', document.getElementById('voiceSelect').value);
-            formData.append('speed', parseFloat(document.getElementById('speedSlider').value));
+            formData.append('voice_name', voiceName);
+            formData.append('speed', speed);
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
@@ -121,8 +144,27 @@ class TTSManager {
             this.currentAudioBlob = audioBlob;
             this.setupAudioPlayer(audioBlob);
             this.showAudioSection();
+            
+            // Update generation status to completed
+            await fetch(`/api/generations/${generationId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({status: 'completed'})
+            });
 
         } catch (error) {
+            // Update generation status to failed
+            if (typeof generationId !== 'undefined') {
+                await fetch(`/api/generations/${generationId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({status: 'failed'})
+                });
+            }
             console.error('Full error details:', error);
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
