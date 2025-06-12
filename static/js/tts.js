@@ -349,19 +349,14 @@ class TTSManager {
     }
 
     addNaturalPauses(text) {
-        // Don't modify text that already has SSML break tags
-        if (text.includes('<break')) {
-            return text;
-        }
-        
-        // Add pauses at natural speech boundaries
+        // Add pauses at natural speech boundaries, avoiding already processed punctuation
         return text
-            // Add pause after commas
-            .replace(/,(\s)/g, '<break time="500ms"/>$1')
-            // Add longer pause after periods, exclamation marks, question marks
-            .replace(/([.!?])(\s)/g, '$1<break time="600ms"/>$2')
-            // Add pause after semicolons and colons
-            .replace(/([;:])(\s)/g, '$1<break time="400ms"/>$2');
+            // Add pause after commas (only if not already followed by a break tag)
+            .replace(/,(\s)(?!<break)/g, ',<break time="500ms"/>$1')
+            // Add longer pause after periods, exclamation marks, question marks (only if not already followed by a break tag)
+            .replace(/([.!?])(\s)(?!<break)/g, '$1<break time="600ms"/>$2')
+            // Add pause after semicolons and colons (only if not already followed by a break tag)
+            .replace(/([;:])(\s)(?!<break)/g, '$1<break time="400ms"/>$2');
     }
 }
 
