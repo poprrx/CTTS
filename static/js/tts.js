@@ -361,6 +361,100 @@ class TTSManager {
             historyList.appendChild(showMoreBtn);
         }
     }
+
+    async adjustAudioSpeed(audioBlob, speedPercentage) {
+        try {
+            console.log(`Adjusting audio speed to ${speedPercentage}%`);
+            
+            // Convert speed percentage to playback rate
+            const playbackRate = speedPercentage / 100;
+            
+            // Create audio context
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Convert blob to array buffer
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            
+            // Decode audio data
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            // Calculate new buffer length
+            const newLength = Math.floor(audioBuffer.length / playbackRate);
+            
+            // Create new audio buffer with adjusted length
+            const newAudioBuffer = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                newLength,
+                audioBuffer.sampleRate
+            );
+            
+            // Apply time-stretching to each channel
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                const inputData = audioBuffer.getChannelData(channel);
+                const outputData = newAudioBuffer.getChannelData(channel);
+                
+                // Simple linear interpolation for time-stretching
+                for (let i = 0; i < newLength; i++) {
+                    const sourceIndex = i * playbackRate;
+                    const index1 = Math.floor(sourceIndex);
+                    const index2 = Math.min(index1 + 1, inputData.length - 1);
+                    const fraction = sourceIndex - index1;
+                    
+                    // Linear interpolation
+                    outputData[i] = inputData[index1] * (1 - fraction) + inputData[index2] * fraction;
+                }
+            }
+            
+            // Convert back to WAV blob
+            const length = newAudioBuffer.length;
+            const numberOfChannels = newAudioBuffer.numberOfChannels;
+            const sampleRate = newAudioBuffer.sampleRate;
+            
+            // Create WAV file buffer
+            const buffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+            const view = new DataView(buffer);
+            
+            // WAV header helper function
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            // Write WAV header
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numberOfChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+            view.setUint16(32, numberOfChannels * 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, length * numberOfChannels * 2, true);
+            
+            // Convert float samples to 16-bit PCM
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    const sample = Math.max(-1, Math.min(1, newAudioBuffer.getChannelData(channel)[i]));
+                    view.setInt16(offset, sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+            
+            console.log('Audio speed adjustment completed');
+            return new Blob([buffer], { type: 'audio/wav' });
+            
+        } catch (error) {
+            console.error('Error adjusting audio speed:', error);
+            // Return original blob if processing fails
+            return audioBlob;
+        }
+    }
 }
 
 // SSML Helper Functions
