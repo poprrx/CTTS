@@ -90,15 +90,18 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
+            // Convert commas to periods for better TTS pauses (except in dates)
+            const processedText = this.convertCommasToPeriods(genText);
+            
             const formData = new FormData();
-            formData.append('gen_text', genText);
+            formData.append('gen_text', processedText);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
             formData.append('speed', speed);
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: genText,
+                gen_text: processedText,
                 ref_text: document.getElementById('refText').value,
                 voice_name: voiceName,
                 speed: speed
@@ -338,6 +341,43 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
+    }
+
+    convertCommasToPeriods(text) {
+        // Regex to match dates in various formats (MM/DD/YYYY, DD/MM/YYYY, Month DD, YYYY, etc.)
+        const datePatterns = [
+            /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g,           // MM/DD/YYYY or DD/MM/YYYY
+            /\b\d{1,2}-\d{1,2}-\d{4}\b/g,             // MM-DD-YYYY or DD-MM-YYYY
+            /\b\w+ \d{1,2}, \d{4}\b/g,                // Month DD, YYYY
+            /\b\d{1,2} \w+ \d{4}\b/g,                 // DD Month YYYY
+            /\b\d{4}, \d{1,2}, \d{1,2}\b/g,          // YYYY, MM, DD
+            /\b\w+ \d{1,2}, \d{4}\b/g                 // January 16, 1995
+        ];
+        
+        // Store found dates with placeholders
+        const dateMap = new Map();
+        let processedText = text;
+        let placeholderIndex = 0;
+        
+        // Replace dates with placeholders
+        datePatterns.forEach(pattern => {
+            processedText = processedText.replace(pattern, (match) => {
+                const placeholder = `__DATE_PLACEHOLDER_${placeholderIndex}__`;
+                dateMap.set(placeholder, match);
+                placeholderIndex++;
+                return placeholder;
+            });
+        });
+        
+        // Convert remaining commas to periods
+        processedText = processedText.replace(/,/g, '.');
+        
+        // Restore dates
+        dateMap.forEach((originalDate, placeholder) => {
+            processedText = processedText.replace(placeholder, originalDate);
+        });
+        
+        return processedText;
     }
 }
 
