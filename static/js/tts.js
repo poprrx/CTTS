@@ -388,7 +388,9 @@ class TTSManager {
                 audioBuffer.sampleRate
             );
             
-            // Apply time-stretching to each channel
+            // Apply time-stretching to each channel with volume normalization
+            let maxAmplitude = 0;
+            
             for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
                 const inputData = audioBuffer.getChannelData(channel);
                 const outputData = newAudioBuffer.getChannelData(channel);
@@ -402,6 +404,32 @@ class TTSManager {
                     
                     // Linear interpolation
                     outputData[i] = inputData[index1] * (1 - fraction) + inputData[index2] * fraction;
+                    
+                    // Track maximum amplitude for normalization
+                    maxAmplitude = Math.max(maxAmplitude, Math.abs(outputData[i]));
+                }
+            }
+            
+            // Apply consistent volume normalization based on speed
+            // Slower speeds tend to amplify, so we apply compensation
+            let volumeCompensation = 1.0;
+            if (playbackRate < 1.0) {
+                // For slower speeds, reduce volume to compensate for interpolation gain
+                volumeCompensation = 0.8 + (playbackRate * 0.2);
+            } else if (playbackRate > 1.0) {
+                // For faster speeds, slightly boost to maintain clarity
+                volumeCompensation = Math.min(1.1, 1.0 + (playbackRate - 1.0) * 0.1);
+            }
+            
+            // Normalize volume to prevent clipping and apply compensation
+            const targetAmplitude = 0.9 * volumeCompensation;
+            if (maxAmplitude > 0.01) { // Avoid division by zero
+                const normalizationFactor = targetAmplitude / maxAmplitude;
+                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                    const outputData = newAudioBuffer.getChannelData(channel);
+                    for (let i = 0; i < newLength; i++) {
+                        outputData[i] *= normalizationFactor;
+                    }
                 }
             }
             
