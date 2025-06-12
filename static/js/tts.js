@@ -4,6 +4,7 @@ class TTSManager {
         this.apiUrl = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate';
         this.currentAudioBlob = null;
         this.testMode = false;
+        this.backendTimeout = 120000; // 2 minutes timeout for TTS generation
         this.initializeEventListeners();
         this.initializeTooltips();
         this.checkBackendStatus();
@@ -105,15 +106,21 @@ class TTSManager {
                 speed: speed
             });
 
-            // Make API request with proper headers for CORS
+            // Make API request with proper headers for CORS and extended timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.backendTimeout);
+            
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
                     'Accept': 'application/octet-stream, audio/wav, audio/*'
                 },
-                body: formData
+                body: formData,
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -177,8 +184,10 @@ class TTSManager {
             let errorMessage = error.message || 'Unknown error occurred';
             
             // Handle specific error types
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                errorMessage = 'Network connection failed. Check if F5-TTS backend is accessible.';
+            if (error.name === 'AbortError') {
+                errorMessage = 'Voice generation timed out after 2 minutes. The F5-TTS backend may be starting up or overloaded. Please try again.';
+            } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                errorMessage = 'F5-TTS backend connection failed. The RunPod instance may be sleeping or restarting. Please wait a moment and try again.';
             } else if (error.message.includes('CORS')) {
                 errorMessage = 'Cross-origin request blocked. Backend needs CORS configuration.';
             } else if (error.message.includes('500')) {
