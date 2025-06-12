@@ -40,7 +40,8 @@ class TTSManager {
         // Speed slider updates
         const speedSlider = document.getElementById('speedSlider');
         speedSlider.addEventListener('input', (e) => {
-            document.getElementById('speedValue').textContent = e.target.value;
+            const percentage = e.target.value;
+            document.getElementById('speedValue').textContent = percentage;
         });
 
         // Volume slider updates
@@ -68,13 +69,17 @@ class TTSManager {
             // Collect form data
             const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
-            const speed = parseFloat(document.getElementById('speedSlider').value);
+            const speedPercentage = parseInt(document.getElementById('speedSlider').value);
+            
+            // Convert percentage to speed multiplier (0-200% -> 0.1-2.0x)
+            // 0% = 0.1x, 100% = 1.0x, 200% = 2.0x
+            const speed = Math.max(0.1, speedPercentage / 100);
             
             // Save generation to database before starting
             const generationData = {
                 text_input: genText,
                 voice_name: voiceName,
-                speed: speed,
+                speed: speedPercentage, // Store percentage value for consistency
                 status: 'pending'
             };
             
