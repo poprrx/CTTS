@@ -90,39 +90,29 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
-            // Process text to add automatic pauses at commas (if enabled)
-            const autoPauseEnabled = document.getElementById('autoPauseCheck').checked;
-            const processedText = autoPauseEnabled ? this.addAutomaticPauses(genText) : genText;
-            
             const formData = new FormData();
-            formData.append('gen_text', processedText);
+            formData.append('gen_text', genText);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
             formData.append('speed', speed);
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: processedText,
+                gen_text: genText,
                 ref_text: document.getElementById('refText').value,
                 voice_name: voiceName,
                 speed: speed
             });
 
-            // Make API request with proper headers for CORS and timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for longer texts
-            
+            // Make API request with proper headers for CORS
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
                     'Accept': 'application/octet-stream, audio/wav, audio/*'
                 },
-                body: formData,
-                signal: controller.signal
+                body: formData
             });
-            
-            clearTimeout(timeoutId);
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -186,10 +176,8 @@ class TTSManager {
             let errorMessage = error.message || 'Unknown error occurred';
             
             // Handle specific error types
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request timed out. Text may be too long or backend is overloaded.';
-            } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                errorMessage = 'Network connection failed. F5-TTS backend may be temporarily unavailable.';
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Network connection failed. Check if F5-TTS backend is accessible.';
             } else if (error.message.includes('CORS')) {
                 errorMessage = 'Cross-origin request blocked. Backend needs CORS configuration.';
             } else if (error.message.includes('500')) {
@@ -350,23 +338,6 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
-    }
-
-    addAutomaticPauses(text) {
-        // Limit automatic pauses to prevent backend overload
-        // Only add pauses at sentence boundaries and major clause separators
-        let processed = text;
-        
-        // Add pauses after periods (but not abbreviations)
-        processed = processed.replace(/\.(\s+)(?=[A-Z])/g, '.$1<break time="400ms"/>');
-        
-        // Add pauses at major clause breaks only (limit to 5 total to prevent timeout)
-        const commaMatches = processed.match(/,(\s+)(?=[A-Z]|and |or |but |which |that )/g);
-        if (commaMatches && commaMatches.length <= 5) {
-            processed = processed.replace(/,(\s+)(?=[A-Z]|and |or |but |which |that )/g, ',$1<break time="200ms"/>');
-        }
-        
-        return processed;
     }
 }
 
