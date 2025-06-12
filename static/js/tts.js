@@ -69,7 +69,7 @@ class TTSManager {
             const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
-            const speed = speedPercentage / 100; // Convert percentage to decimal
+            const speed = Math.max(0.1, speedPercentage / 100); // Convert percentage to decimal, minimum 0.1
             
             // Save generation to database before starting
             const generationData = {
