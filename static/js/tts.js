@@ -68,13 +68,14 @@ class TTSManager {
             // Collect form data
             const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
-            const speed = parseFloat(document.getElementById('speedSlider').value);
+            const speedPercentage = parseInt(document.getElementById('speedSlider').value);
+            const speed = speedPercentage / 100; // Convert percentage to decimal
             
             // Save generation to database before starting
             const generationData = {
                 text_input: genText,
                 voice_name: voiceName,
-                speed: speed,
+                speed: speedPercentage, // Store percentage in database
                 status: 'pending'
             };
             
@@ -97,10 +98,10 @@ class TTSManager {
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: document.getElementById('genText').value,
+                gen_text: genText,
                 ref_text: document.getElementById('refText').value,
-                voice_name: document.getElementById('voiceSelect').value,
-                speed: parseFloat(document.getElementById('speedSlider').value)
+                voice_name: voiceName,
+                speed: speed
             });
 
             // Make API request with proper headers for CORS
