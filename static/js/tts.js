@@ -69,7 +69,15 @@ class TTSManager {
             const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
-            const speed = Math.max(0.1, speedPercentage / 100); // Convert percentage to decimal, minimum 0.1
+            // Use a curve that reduces echo at very slow speeds
+            let speed;
+            if (speedPercentage <= 50) {
+                // For slower speeds, use a gentler curve to reduce echo
+                speed = Math.max(0.3, 0.3 + (speedPercentage / 50) * 0.4); // 0.3 to 0.7
+            } else {
+                // For normal and faster speeds, use linear scaling
+                speed = 0.7 + ((speedPercentage - 50) / 150) * 1.3; // 0.7 to 2.0
+            }
             
             // Save generation to database before starting
             const generationData = {
