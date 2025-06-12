@@ -1,10 +1,12 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify
+import requests
+from flask import Flask, render_template, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime
+from audio_processor import process_audio_speed
 
 # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
@@ -101,6 +103,54 @@ def update_generation(generation_id):
         db.session.commit()
         return jsonify({'status': 'updated'})
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate_voice_enhanced', methods=['POST'])
+def generate_voice_enhanced():
+    """Generate voice with enhanced speed processing"""
+    try:
+        data = request.get_json()
+        gen_text = data.get('gen_text')
+        speed_percentage = int(data.get('speed_percentage', 100))
+        
+        # Prepare request to F5-TTS backend
+        f5_payload = {
+            'gen_text': gen_text,
+            'ref_text': 'About Star Trek Voyager. Star Trek Voyager is an American science fiction television series created by Rick Berman, Michael Piller, and Jeri Taylor.',
+            'voice_name': 'about_star_trek',
+            'speed': 1.0,  # Always generate at normal speed first
+            'ref_audio_path': '/workspace/F5-TTS/wavs/about_star_trek.wav'
+        }
+        
+        # Call F5-TTS backend
+        f5_url = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate'
+        
+        # Convert to FormData for F5-TTS
+        files = {}
+        form_data = {}
+        for key, value in f5_payload.items():
+            form_data[key] = str(value)
+        
+        response = requests.post(f5_url, data=form_data, files=files)
+        response.raise_for_status()
+        
+        # Get original audio
+        original_audio = response.content
+        
+        # Apply speed processing if needed
+        if speed_percentage != 100:
+            processed_audio = process_audio_speed(original_audio, speed_percentage)
+        else:
+            processed_audio = original_audio
+        
+        return Response(
+            processed_audio,
+            mimetype='audio/wav',
+            headers={'Content-Disposition': 'attachment; filename=generated_voice.wav'}
+        )
+        
+    except Exception as e:
+        logging.error(f"Voice generation error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Define models here to avoid circular imports

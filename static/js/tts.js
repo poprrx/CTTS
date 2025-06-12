@@ -71,9 +71,16 @@ class TTSManager {
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
             
-            // Convert percentage to speed multiplier (0-200% -> 0.1-2.0x)
-            // 0% = 0.1x, 100% = 1.0x, 200% = 2.0x
-            const speed = Math.max(0.1, speedPercentage / 100);
+            // Convert percentage to speed multiplier with better mapping
+            // 0% = 0.5x, 100% = 1.0x, 200% = 1.8x (avoiding extreme values)
+            let speed;
+            if (speedPercentage <= 100) {
+                // 0-100% maps to 0.5-1.0x
+                speed = 0.5 + (speedPercentage / 100) * 0.5;
+            } else {
+                // 101-200% maps to 1.0-1.8x
+                speed = 1.0 + ((speedPercentage - 100) / 100) * 0.8;
+            }
             
             // Save generation to database before starting
             const generationData = {
@@ -103,10 +110,10 @@ class TTSManager {
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: document.getElementById('genText').value,
+                gen_text: genText,
                 ref_text: document.getElementById('refText').value,
-                voice_name: document.getElementById('voiceSelect').value,
-                speed: parseFloat(document.getElementById('speedSlider').value)
+                voice_name: voiceName,
+                speed: speed
             });
 
             // Make API request with proper headers for CORS
