@@ -90,15 +90,18 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
+            // Process text to add automatic pauses at commas
+            const processedText = this.addAutomaticPauses(genText);
+            
             const formData = new FormData();
-            formData.append('gen_text', genText);
+            formData.append('gen_text', processedText);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
             formData.append('speed', speed);
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: genText,
+                gen_text: processedText,
                 ref_text: document.getElementById('refText').value,
                 voice_name: voiceName,
                 speed: speed
@@ -338,6 +341,11 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
+    }
+
+    addAutomaticPauses(text) {
+        // Replace commas with comma + pause, but preserve existing SSML break tags
+        return text.replace(/,(?!\s*<break)/g, ',<break time="300ms"/>');
     }
 }
 
