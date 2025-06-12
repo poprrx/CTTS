@@ -71,16 +71,9 @@ class TTSManager {
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
             
-            // Convert percentage to speed multiplier with better mapping
-            // 0% = 0.5x, 100% = 1.0x, 200% = 1.8x (avoiding extreme values)
-            let speed;
-            if (speedPercentage <= 100) {
-                // 0-100% maps to 0.5-1.0x
-                speed = 0.5 + (speedPercentage / 100) * 0.5;
-            } else {
-                // 101-200% maps to 1.0-1.8x
-                speed = 1.0 + ((speedPercentage - 100) / 100) * 0.8;
-            }
+            // Convert percentage to speed multiplier (0-200% -> 0.1-2.0x)
+            // 0% = 0.1x, 100% = 1.0x, 200% = 2.0x
+            const speed = Math.max(0.1, speedPercentage / 100);
             
             // Save generation to database before starting
             const generationData = {
@@ -101,24 +94,22 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
-            // Always generate at normal speed to preserve natural pause timing
             const formData = new FormData();
             formData.append('gen_text', genText);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
-            formData.append('speed', 1.0); // Always use normal speed
+            formData.append('speed', speed);
             formData.append('ref_audio_path', '/workspace/F5-TTS/wavs/about_star_trek.wav');
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
-                gen_text: genText,
+                gen_text: document.getElementById('genText').value,
                 ref_text: document.getElementById('refText').value,
-                voice_name: voiceName,
-                speed: 1.0,
-                client_speed_percentage: speedPercentage
+                voice_name: document.getElementById('voiceSelect').value,
+                speed: parseFloat(document.getElementById('speedSlider').value)
             });
 
-            // Make API request
+            // Make API request with proper headers for CORS
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
@@ -156,16 +147,8 @@ class TTSManager {
                 throw new Error('Received empty audio file from server');
             }
 
-            // Apply client-side speed adjustment if needed
-            if (speedPercentage !== 100) {
-                const adjustedBlob = await this.adjustAudioSpeed(audioBlob, speedPercentage);
-                this.currentAudioBlob = adjustedBlob;
-                this.setupAudioPlayer(adjustedBlob);
-            } else {
-                this.currentAudioBlob = audioBlob;
-                this.setupAudioPlayer(audioBlob);
-            }
-            
+            this.currentAudioBlob = audioBlob;
+            this.setupAudioPlayer(audioBlob);
             this.showAudioSection();
             
             // Update generation status to completed
@@ -359,101 +342,6 @@ class TTSManager {
                 </button>
             `;
             historyList.appendChild(showMoreBtn);
-        }
-    }
-
-    async adjustAudioSpeed(audioBlob, speedPercentage) {
-        try {
-            console.log(`Adjusting audio speed to ${speedPercentage}% using pitch-preserving method`);
-            
-            // For near-normal speeds, use the original audio with playback rate control
-            if (speedPercentage >= 95 && speedPercentage <= 105) {
-                return audioBlob; // Let the audio player handle minor speed adjustments
-            }
-            
-            // Convert speed percentage to playback rate
-            const playbackRate = speedPercentage / 100;
-            
-            // Create audio context
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Convert blob to array buffer
-            const arrayBuffer = await audioBlob.arrayBuffer();
-            
-            // Decode audio data
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            
-            // Use offline audio context for pitch-preserving time stretching
-            const offlineContext = new OfflineAudioContext(
-                audioBuffer.numberOfChannels,
-                Math.floor(audioBuffer.length / playbackRate),
-                audioBuffer.sampleRate
-            );
-            
-            // Create buffer source
-            const source = offlineContext.createBufferSource();
-            source.buffer = audioBuffer;
-            
-            // Connect to destination
-            source.connect(offlineContext.destination);
-            
-            // Set playback rate (this preserves pitch while changing speed)
-            source.playbackRate.setValueAtTime(playbackRate, 0);
-            
-            // Start playback
-            source.start(0);
-            
-            // Render the audio
-            const renderedBuffer = await offlineContext.startRendering();
-            
-            // Convert back to WAV blob
-            const length = renderedBuffer.length;
-            const numberOfChannels = renderedBuffer.numberOfChannels;
-            const sampleRate = renderedBuffer.sampleRate;
-            
-            // Create WAV file buffer
-            const buffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
-            const view = new DataView(buffer);
-            
-            // WAV header helper function
-            const writeString = (offset, string) => {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            };
-            
-            // Write WAV header
-            writeString(0, 'RIFF');
-            view.setUint32(4, 36 + length * numberOfChannels * 2, true);
-            writeString(8, 'WAVE');
-            writeString(12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numberOfChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-            view.setUint16(32, numberOfChannels * 2, true);
-            view.setUint16(34, 16, true);
-            writeString(36, 'data');
-            view.setUint32(40, length * numberOfChannels * 2, true);
-            
-            // Convert float samples to 16-bit PCM
-            let offset = 44;
-            for (let i = 0; i < length; i++) {
-                for (let channel = 0; channel < numberOfChannels; channel++) {
-                    const sample = Math.max(-1, Math.min(1, renderedBuffer.getChannelData(channel)[i]));
-                    view.setInt16(offset, sample * 0x7FFF, true);
-                    offset += 2;
-                }
-            }
-            
-            console.log('Pitch-preserving audio speed adjustment completed');
-            return new Blob([buffer], { type: 'audio/wav' });
-            
-        } catch (error) {
-            console.error('Error adjusting audio speed:', error);
-            // Return original blob if processing fails
-            return audioBlob;
         }
     }
 }

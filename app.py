@@ -1,12 +1,10 @@
 import os
 import logging
-import requests
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime
-from audio_processor import process_audio_speed
 
 # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
@@ -103,59 +101,6 @@ def update_generation(generation_id):
         db.session.commit()
         return jsonify({'status': 'updated'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/generate_voice_with_ssml', methods=['POST'])
-def generate_voice_with_ssml():
-    """Generate voice with proper SSML break processing"""
-    try:
-        data = request.get_json()
-        gen_text = data.get('gen_text')
-        speed_percentage = int(data.get('speed_percentage', 100))
-        
-        # Convert percentage to speed multiplier with better mapping
-        if speed_percentage <= 100:
-            speed = 0.5 + (speed_percentage / 100) * 0.5
-        else:
-            speed = 1.0 + ((speed_percentage - 100) / 100) * 0.8
-        
-        # Process SSML breaks
-        from ssml_processor import process_ssml_text_and_audio
-        
-        # Create temporary output file
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-            temp_output_path = temp_file.name
-        
-        try:
-            # Process with SSML handling
-            success = process_ssml_text_and_audio(
-                gen_text=gen_text,
-                ref_audio_path='/workspace/F5-TTS/wavs/about_star_trek.wav',
-                ref_text='About Star Trek Voyager. Star Trek Voyager is an American science fiction television series created by Rick Berman, Michael Piller, and Jeri Taylor.',
-                output_file=temp_output_path,
-                speed=speed
-            )
-            
-            if success and os.path.exists(temp_output_path):
-                with open(temp_output_path, 'rb') as f:
-                    audio_data = f.read()
-                
-                return Response(
-                    audio_data,
-                    mimetype='audio/wav',
-                    headers={'Content-Disposition': 'attachment; filename=generated_voice.wav'}
-                )
-            else:
-                return jsonify({'error': 'Failed to generate audio'}), 500
-                
-        finally:
-            # Clean up temporary file
-            if os.path.exists(temp_output_path):
-                os.unlink(temp_output_path)
-        
-    except Exception as e:
-        logging.error(f"SSML voice generation error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Define models here to avoid circular imports
