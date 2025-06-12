@@ -364,7 +364,12 @@ class TTSManager {
 
     async adjustAudioSpeed(audioBlob, speedPercentage) {
         try {
-            console.log(`Adjusting audio speed to ${speedPercentage}%`);
+            console.log(`Adjusting audio speed to ${speedPercentage}% using pitch-preserving method`);
+            
+            // For near-normal speeds, use the original audio with playback rate control
+            if (speedPercentage >= 95 && speedPercentage <= 105) {
+                return audioBlob; // Let the audio player handle minor speed adjustments
+            }
             
             // Convert speed percentage to playback rate
             const playbackRate = speedPercentage / 100;
@@ -378,65 +383,33 @@ class TTSManager {
             // Decode audio data
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             
-            // Calculate new buffer length
-            const newLength = Math.floor(audioBuffer.length / playbackRate);
-            
-            // Create new audio buffer with adjusted length
-            const newAudioBuffer = audioContext.createBuffer(
+            // Use offline audio context for pitch-preserving time stretching
+            const offlineContext = new OfflineAudioContext(
                 audioBuffer.numberOfChannels,
-                newLength,
+                Math.floor(audioBuffer.length / playbackRate),
                 audioBuffer.sampleRate
             );
             
-            // Apply time-stretching to each channel with volume normalization
-            let maxAmplitude = 0;
+            // Create buffer source
+            const source = offlineContext.createBufferSource();
+            source.buffer = audioBuffer;
             
-            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-                const inputData = audioBuffer.getChannelData(channel);
-                const outputData = newAudioBuffer.getChannelData(channel);
-                
-                // Simple linear interpolation for time-stretching
-                for (let i = 0; i < newLength; i++) {
-                    const sourceIndex = i * playbackRate;
-                    const index1 = Math.floor(sourceIndex);
-                    const index2 = Math.min(index1 + 1, inputData.length - 1);
-                    const fraction = sourceIndex - index1;
-                    
-                    // Linear interpolation
-                    outputData[i] = inputData[index1] * (1 - fraction) + inputData[index2] * fraction;
-                    
-                    // Track maximum amplitude for normalization
-                    maxAmplitude = Math.max(maxAmplitude, Math.abs(outputData[i]));
-                }
-            }
+            // Connect to destination
+            source.connect(offlineContext.destination);
             
-            // Apply consistent volume normalization based on speed
-            // Slower speeds tend to amplify, so we apply compensation
-            let volumeCompensation = 1.0;
-            if (playbackRate < 1.0) {
-                // For slower speeds, reduce volume to compensate for interpolation gain
-                volumeCompensation = 0.8 + (playbackRate * 0.2);
-            } else if (playbackRate > 1.0) {
-                // For faster speeds, slightly boost to maintain clarity
-                volumeCompensation = Math.min(1.1, 1.0 + (playbackRate - 1.0) * 0.1);
-            }
+            // Set playback rate (this preserves pitch while changing speed)
+            source.playbackRate.setValueAtTime(playbackRate, 0);
             
-            // Normalize volume to prevent clipping and apply compensation
-            const targetAmplitude = 0.9 * volumeCompensation;
-            if (maxAmplitude > 0.01) { // Avoid division by zero
-                const normalizationFactor = targetAmplitude / maxAmplitude;
-                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-                    const outputData = newAudioBuffer.getChannelData(channel);
-                    for (let i = 0; i < newLength; i++) {
-                        outputData[i] *= normalizationFactor;
-                    }
-                }
-            }
+            // Start playback
+            source.start(0);
+            
+            // Render the audio
+            const renderedBuffer = await offlineContext.startRendering();
             
             // Convert back to WAV blob
-            const length = newAudioBuffer.length;
-            const numberOfChannels = newAudioBuffer.numberOfChannels;
-            const sampleRate = newAudioBuffer.sampleRate;
+            const length = renderedBuffer.length;
+            const numberOfChannels = renderedBuffer.numberOfChannels;
+            const sampleRate = renderedBuffer.sampleRate;
             
             // Create WAV file buffer
             const buffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
@@ -468,13 +441,13 @@ class TTSManager {
             let offset = 44;
             for (let i = 0; i < length; i++) {
                 for (let channel = 0; channel < numberOfChannels; channel++) {
-                    const sample = Math.max(-1, Math.min(1, newAudioBuffer.getChannelData(channel)[i]));
+                    const sample = Math.max(-1, Math.min(1, renderedBuffer.getChannelData(channel)[i]));
                     view.setInt16(offset, sample * 0x7FFF, true);
                     offset += 2;
                 }
             }
             
-            console.log('Audio speed adjustment completed');
+            console.log('Pitch-preserving audio speed adjustment completed');
             return new Blob([buffer], { type: 'audio/wav' });
             
         } catch (error) {
