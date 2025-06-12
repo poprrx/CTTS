@@ -356,10 +356,10 @@ class TTSManager {
         
         // Add pauses at natural speech boundaries
         return text
-            // Add short pause after commas
-            .replace(/,(\s)/g, '<break time="300ms"/>$1')
-            // Add medium pause after periods, exclamation marks, question marks
-            .replace(/([.!?])(\s)/g, '$1<break time="500ms"/>$2')
+            // Add pause after commas
+            .replace(/,(\s)/g, '<break time="500ms"/>$1')
+            // Add longer pause after periods, exclamation marks, question marks
+            .replace(/([.!?])(\s)/g, '$1<break time="600ms"/>$2')
             // Add pause after semicolons and colons
             .replace(/([;:])(\s)/g, '$1<break time="400ms"/>$2');
     }
