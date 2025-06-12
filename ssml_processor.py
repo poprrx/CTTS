@@ -3,7 +3,7 @@ import re
 import os
 import subprocess
 from pydub import AudioSegment
-# from pydub.silence import Silence  # Not needed
+from pydub.silence import Silence
 import tempfile
 
 def process_ssml_text_and_audio(gen_text, ref_audio_path, ref_text, output_file):

@@ -1,7 +1,5 @@
 import os
 import logging
-import requests
-import re
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -40,34 +38,6 @@ db.init_app(app)
 def index():
     """Serve the main TTS interface"""
     return render_template('index.html')
-
-@app.route('/api/generate', methods=['POST'])
-def generate_voice():
-    """Generate voice with SSML processing"""
-    try:
-        data = request.get_json()
-        gen_text = data.get('gen_text', '')
-        ref_text = data.get('ref_text', '')
-        voice_name = data.get('voice_name', 'about_star_trek')
-        speed = data.get('speed', 1.0)
-        
-        # Reference audio path for the voice
-        ref_audio_path = f"/tmp/{voice_name}_ref.wav"
-        
-        # Create output file
-        output_file = f"/tmp/generated_{voice_name}_{int(datetime.now().timestamp())}.wav"
-        
-        # Process SSML and generate audio
-        success = process_ssml_text_and_audio(gen_text, ref_audio_path, ref_text, output_file)
-        
-        if success and os.path.exists(output_file):
-            return send_file(output_file, as_attachment=True, download_name="generated_voice.wav")
-        else:
-            return jsonify({'error': 'Voice generation failed'}), 500
-            
-    except Exception as e:
-        logging.error(f"Voice generation error: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/generations', methods=['GET'])
 def get_generations():

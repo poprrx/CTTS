@@ -4,7 +4,6 @@ class TTSManager {
         this.apiUrl = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate';
         this.currentAudioBlob = null;
         this.testMode = false;
-        this.backendTimeout = 120000; // 2 minutes timeout for TTS generation
         this.initializeEventListeners();
         this.initializeTooltips();
         this.checkBackendStatus();
@@ -67,15 +66,14 @@ class TTSManager {
             this.hideAudioSection();
 
             // Collect form data
-            const rawText = document.getElementById('genText').value;
-            const genText = this.addCommaBreaks(rawText); // Add SSML breaks at commas
+            const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
             const speed = Math.max(0.1, speedPercentage / 100); // Convert percentage to decimal, minimum 0.1
             
-            // Save generation to database before starting (store original text without SSML)
+            // Save generation to database before starting
             const generationData = {
-                text_input: rawText,
+                text_input: genText,
                 voice_name: voiceName,
                 speed: speedPercentage, // Store percentage in database
                 status: 'pending'
@@ -106,21 +104,15 @@ class TTSManager {
                 speed: speed
             });
 
-            // Make API request with proper headers for CORS and extended timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.backendTimeout);
-            
+            // Make API request with proper headers for CORS
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
                     'Accept': 'application/octet-stream, audio/wav, audio/*'
                 },
-                body: formData,
-                signal: controller.signal
+                body: formData
             });
-            
-            clearTimeout(timeoutId);
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -184,10 +176,8 @@ class TTSManager {
             let errorMessage = error.message || 'Unknown error occurred';
             
             // Handle specific error types
-            if (error.name === 'AbortError') {
-                errorMessage = 'Voice generation timed out after 2 minutes. The F5-TTS backend may be starting up or overloaded. Please try again.';
-            } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                errorMessage = 'F5-TTS backend connection failed. The RunPod instance may be sleeping or restarting. Please wait a moment and try again.';
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Network connection failed. Check if F5-TTS backend is accessible.';
             } else if (error.message.includes('CORS')) {
                 errorMessage = 'Cross-origin request blocked. Backend needs CORS configuration.';
             } else if (error.message.includes('500')) {
@@ -348,11 +338,6 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
-    }
-
-    addCommaBreaks(text) {
-        // Replace commas with commas followed by SSML break tags
-        return text.replace(/,/g, ',<break time="500ms"/>');
     }
 }
 
