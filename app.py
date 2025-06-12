@@ -42,63 +42,50 @@ def index():
     """Serve the main TTS interface"""
     return render_template('index.html')
 
-@app.route('/api/generate_voice', methods=['POST'])
-def generate_voice():
-    """Generate voice with proper speed adjustment"""
+@app.route('/api/generate_voice_direct', methods=['POST'])
+def generate_voice_direct():
+    """Direct proxy to F5-TTS with improved error handling"""
     try:
         # Get form data
         gen_text = request.form.get('gen_text')
-        ref_text = request.form.get('ref_text')
+        ref_text = request.form.get('ref_text') 
         voice_name = request.form.get('voice_name')
-        speed_percentage = int(request.form.get('speed', 100))
+        speed = request.form.get('speed', '1.0')
         
-        # Convert speed percentage to multiplier for F5-TTS
-        speed_multiplier = max(0.1, speed_percentage / 100.0)
-        
-        # Prepare data for F5-TTS backend
-        f5_data = {
+        # Prepare form data for F5-TTS
+        form_data = {
             'gen_text': gen_text,
             'ref_text': ref_text,
             'voice_name': voice_name,
-            'speed': speed_multiplier
+            'speed': speed
         }
         
-        # Call F5-TTS backend
+        # Call F5-TTS backend directly
         f5_url = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate'
-        response = requests.post(f5_url, data=f5_data, timeout=120)
         
-        if response.status_code != 200:
-            return jsonify({'error': 'F5-TTS backend error'}), 500
-        
-        # Save raw audio to temporary file
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_raw:
-            temp_raw.write(response.content)
-            temp_raw_path = temp_raw.name
-        
-        # If speed is not 100%, apply pitch-preserving speed adjustment
-        if speed_percentage != 100:
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_processed:
-                temp_processed_path = temp_processed.name
+        with requests.post(f5_url, data=form_data, timeout=300, stream=True) as response:
+            if response.status_code != 200:
+                return jsonify({'error': f'F5-TTS backend error: {response.status_code}'}), 500
             
-            success = process_audio_with_speed(temp_raw_path, temp_processed_path, speed_percentage)
+            # Stream the response back
+            def generate():
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
             
-            if success:
-                # Clean up raw file and use processed file
-                os.unlink(temp_raw_path)
-                final_audio_path = temp_processed_path
-            else:
-                # Fallback to raw audio if processing fails
-                os.unlink(temp_processed_path)
-                final_audio_path = temp_raw_path
-        else:
-            final_audio_path = temp_raw_path
+            return app.response_class(
+                generate(),
+                mimetype='audio/wav',
+                headers={'Content-Type': 'audio/wav'}
+            )
         
-        # Return the processed audio file
-        return send_file(final_audio_path, mimetype='audio/wav', as_attachment=False)
-        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timeout - F5-TTS backend took too long'}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Connection error - F5-TTS backend unavailable'}), 503
     except Exception as e:
-        logging.error(f"Error in generate_voice: {e}")
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Error in generate_voice_direct: {e}")
+        return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 @app.route('/api/generations', methods=['GET'])
 def get_generations():

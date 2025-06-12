@@ -100,7 +100,12 @@ class TTSManager {
             formData.append('voice_name', voiceName);
             formData.append('speed', speedPercentage); // Send percentage for pitch-preserving processing
 
-            const apiUrl = '/api/generate_voice'; // Use local endpoint with pitch preservation
+            // Use improved direct proxy endpoint
+            const apiUrl = '/api/generate_voice_direct';
+            
+            // Update form data for direct F5-TTS call
+            formData.set('speed', speed); // Use converted speed multiplier
+            
             console.log('Sending request to:', apiUrl);
             console.log('Form data:', {
                 gen_text: document.getElementById('genText').value,
@@ -112,6 +117,7 @@ class TTSManager {
             // Make API request with proper headers for CORS
             const response = await fetch(apiUrl, {
                 method: 'POST',
+                mode: 'cors',
                 headers: {
                     'Accept': 'application/octet-stream, audio/wav, audio/*'
                 },
