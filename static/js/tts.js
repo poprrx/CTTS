@@ -107,15 +107,21 @@ class TTSManager {
                 speed: speed
             });
 
-            // Make API request with proper headers for CORS
+            // Make API request with proper headers for CORS and timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+            
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
                 headers: {
                     'Accept': 'application/octet-stream, audio/wav, audio/*'
                 },
-                body: formData
+                body: formData,
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -179,8 +185,10 @@ class TTSManager {
             let errorMessage = error.message || 'Unknown error occurred';
             
             // Handle specific error types
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                errorMessage = 'Network connection failed. Check if F5-TTS backend is accessible.';
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. Text may be too long or backend is overloaded.';
+            } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Network connection failed. F5-TTS backend may be temporarily unavailable.';
             } else if (error.message.includes('CORS')) {
                 errorMessage = 'Cross-origin request blocked. Backend needs CORS configuration.';
             } else if (error.message.includes('500')) {
@@ -344,8 +352,9 @@ class TTSManager {
     }
 
     addAutomaticPauses(text) {
-        // Replace commas with comma + pause, but preserve existing SSML break tags
-        return text.replace(/,(?!\s*<break)/g, ',<break time="300ms"/>');
+        // Only add pauses to significant commas (those followed by a space and capital letter or new clause)
+        // This reduces the number of SSML tags and prevents backend timeout
+        return text.replace(/,(\s+)(?=[A-Z]|and |or |but |which |that |when |where |who )/g, ',$1<break time="250ms"/>');
     }
 }
 
