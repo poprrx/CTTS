@@ -1,10 +1,13 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify
+import tempfile
+import requests
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime
+from audio_processor import process_audio_with_speed
 
 # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
@@ -38,6 +41,64 @@ db.init_app(app)
 def index():
     """Serve the main TTS interface"""
     return render_template('index.html')
+
+@app.route('/api/generate_voice', methods=['POST'])
+def generate_voice():
+    """Generate voice with proper speed adjustment"""
+    try:
+        # Get form data
+        gen_text = request.form.get('gen_text')
+        ref_text = request.form.get('ref_text')
+        voice_name = request.form.get('voice_name')
+        speed_percentage = int(request.form.get('speed', 100))
+        
+        # Convert speed percentage to multiplier for F5-TTS
+        speed_multiplier = max(0.1, speed_percentage / 100.0)
+        
+        # Prepare data for F5-TTS backend
+        f5_data = {
+            'gen_text': gen_text,
+            'ref_text': ref_text,
+            'voice_name': voice_name,
+            'speed': speed_multiplier
+        }
+        
+        # Call F5-TTS backend
+        f5_url = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate'
+        response = requests.post(f5_url, data=f5_data, timeout=120)
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'F5-TTS backend error'}), 500
+        
+        # Save raw audio to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_raw:
+            temp_raw.write(response.content)
+            temp_raw_path = temp_raw.name
+        
+        # If speed is not 100%, apply pitch-preserving speed adjustment
+        if speed_percentage != 100:
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_processed:
+                temp_processed_path = temp_processed.name
+            
+            success = process_audio_with_speed(temp_raw_path, temp_processed_path, speed_percentage)
+            
+            if success:
+                # Clean up raw file and use processed file
+                os.unlink(temp_raw_path)
+                final_audio_path = temp_processed_path
+            else:
+                # Fallback to raw audio if processing fails
+                os.unlink(temp_processed_path)
+                final_audio_path = temp_raw_path
+        else:
+            final_audio_path = temp_raw_path
+        
+        # Return the processed audio file
+        return send_file(final_audio_path, mimetype='audio/wav', as_attachment=False)
+        
+    except Exception as e:
+        logging.error(f"Error in generate_voice: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/generations', methods=['GET'])
 def get_generations():
