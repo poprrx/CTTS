@@ -40,8 +40,7 @@ class TTSManager {
         // Speed slider updates
         const speedSlider = document.getElementById('speedSlider');
         speedSlider.addEventListener('input', (e) => {
-            const percentage = e.target.value;
-            document.getElementById('speedValue').textContent = percentage;
+            document.getElementById('speedValue').textContent = e.target.value;
         });
 
         // Volume slider updates
@@ -67,22 +66,15 @@ class TTSManager {
             this.hideAudioSection();
 
             // Collect form data
-            let genText = document.getElementById('genText').value;
+            const genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
-            const speedPercentage = parseInt(document.getElementById('speedSlider').value);
-            
-            // Add natural pauses at punctuation marks
-            genText = this.addNaturalPauses(genText);
-            
-            // Convert percentage to speed multiplier (0-200% -> 0.1-2.0x)
-            // 0% = 0.1x, 100% = 1.0x, 200% = 2.0x
-            const speed = Math.max(0.1, speedPercentage / 100);
+            const speed = parseFloat(document.getElementById('speedSlider').value);
             
             // Save generation to database before starting
             const generationData = {
                 text_input: genText,
                 voice_name: voiceName,
-                speed: speedPercentage, // Store percentage value for consistency
+                speed: speed,
                 status: 'pending'
             };
             
@@ -102,7 +94,6 @@ class TTSManager {
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
             formData.append('speed', speed);
-            formData.append('ref_audio_path', '/workspace/F5-TTS/wavs/about_star_trek.wav');
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
@@ -346,17 +337,6 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
-    }
-
-    addNaturalPauses(text) {
-        // Add pauses at natural speech boundaries, avoiding already processed punctuation
-        return text
-            // Add pause after commas (only if not already followed by a break tag)
-            .replace(/,(\s)(?!<break)/g, ',<break time="500ms"/>$1')
-            // Add longer pause after periods, exclamation marks, question marks (only if not already followed by a break tag)
-            .replace(/([.!?])(\s)(?!<break)/g, '$1<break time="600ms"/>$2')
-            // Add pause after semicolons and colons (only if not already followed by a break tag)
-            .replace(/([;:])(\s)(?!<break)/g, '$1<break time="400ms"/>$2');
     }
 }
 
