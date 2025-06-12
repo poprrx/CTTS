@@ -101,11 +101,12 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
+            // Always generate at normal speed to preserve natural pause timing
             const formData = new FormData();
             formData.append('gen_text', genText);
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
-            formData.append('speed', speed);
+            formData.append('speed', 1.0); // Always use normal speed
             formData.append('ref_audio_path', '/workspace/F5-TTS/wavs/about_star_trek.wav');
 
             console.log('Sending request to:', this.apiUrl);
@@ -113,10 +114,11 @@ class TTSManager {
                 gen_text: genText,
                 ref_text: document.getElementById('refText').value,
                 voice_name: voiceName,
-                speed: speed
+                speed: 1.0,
+                client_speed_percentage: speedPercentage
             });
 
-            // Make API request with proper headers for CORS
+            // Make API request
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 mode: 'cors',
@@ -154,8 +156,16 @@ class TTSManager {
                 throw new Error('Received empty audio file from server');
             }
 
-            this.currentAudioBlob = audioBlob;
-            this.setupAudioPlayer(audioBlob);
+            // Apply client-side speed adjustment if needed
+            if (speedPercentage !== 100) {
+                const adjustedBlob = await this.adjustAudioSpeed(audioBlob, speedPercentage);
+                this.currentAudioBlob = adjustedBlob;
+                this.setupAudioPlayer(adjustedBlob);
+            } else {
+                this.currentAudioBlob = audioBlob;
+                this.setupAudioPlayer(audioBlob);
+            }
+            
             this.showAudioSection();
             
             // Update generation status to completed

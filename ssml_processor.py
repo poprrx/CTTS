@@ -6,9 +6,10 @@ from pydub import AudioSegment
 from pydub.silence import Silence
 import tempfile
 
-def process_ssml_text_and_audio(gen_text, ref_audio_path, ref_text, output_file):
+def process_ssml_text_and_audio(gen_text, ref_audio_path, ref_text, output_file, speed=1.0):
     """
     Process SSML breaks by splitting text and inserting actual silence in audio
+    Speed only affects speech, not pause durations
     """
     # Find all SSML break tags and their positions
     break_pattern = r'<break\s+time\s*=\s*["\']([^"\']+)["\']\s*/>'
@@ -29,11 +30,11 @@ def process_ssml_text_and_audio(gen_text, ref_audio_path, ref_text, output_file)
             if i % 2 == 0:  # Text segments
                 text_part = parts[i].strip()
                 if text_part:
-                    # Generate audio for this text segment
+                    # Generate audio for this text segment with speed adjustment
                     temp_audio_file = f"/tmp/segment_{i}.wav"
                     temp_files.append(temp_audio_file)
                     
-                    success = generate_single_audio(text_part, ref_audio_path, ref_text, temp_audio_file)
+                    success = generate_single_audio(text_part, ref_audio_path, ref_text, temp_audio_file, speed)
                     if success and os.path.exists(temp_audio_file):
                         audio_segments.append(AudioSegment.from_wav(temp_audio_file))
             else:  # Break durations
@@ -80,7 +81,7 @@ def parse_duration_to_ms(duration_str):
         pass
     return 0
 
-def generate_single_audio(text, ref_audio_path, ref_text, output_file):
+def generate_single_audio(text, ref_audio_path, ref_text, output_file, speed=1.0):
     """Generate audio for a single text segment using F5-TTS"""
     try:
         command = [
