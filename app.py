@@ -1,13 +1,10 @@
 import os
 import logging
-import tempfile
-import requests
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime
-from audio_processor import process_audio_with_speed
 
 # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
@@ -41,51 +38,6 @@ db.init_app(app)
 def index():
     """Serve the main TTS interface"""
     return render_template('index.html')
-
-@app.route('/api/generate_voice_direct', methods=['POST'])
-def generate_voice_direct():
-    """Direct proxy to F5-TTS with improved error handling"""
-    try:
-        # Get form data
-        gen_text = request.form.get('gen_text')
-        ref_text = request.form.get('ref_text') 
-        voice_name = request.form.get('voice_name')
-        speed = request.form.get('speed', '1.0')
-        
-        # Prepare form data for F5-TTS
-        form_data = {
-            'gen_text': gen_text,
-            'ref_text': ref_text,
-            'voice_name': voice_name,
-            'speed': speed
-        }
-        
-        # Call F5-TTS backend directly
-        f5_url = 'https://0q8lf8gdlh6u8t-7860.proxy.runpod.net/generate'
-        
-        with requests.post(f5_url, data=form_data, timeout=300, stream=True) as response:
-            if response.status_code != 200:
-                return jsonify({'error': f'F5-TTS backend error: {response.status_code}'}), 500
-            
-            # Stream the response back
-            def generate():
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        yield chunk
-            
-            return app.response_class(
-                generate(),
-                mimetype='audio/wav',
-                headers={'Content-Type': 'audio/wav'}
-            )
-        
-    except requests.exceptions.Timeout:
-        return jsonify({'error': 'Request timeout - F5-TTS backend took too long'}), 504
-    except requests.exceptions.ConnectionError:
-        return jsonify({'error': 'Connection error - F5-TTS backend unavailable'}), 503
-    except Exception as e:
-        logging.error(f"Error in generate_voice_direct: {e}")
-        return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 @app.route('/api/generations', methods=['GET'])
 def get_generations():
