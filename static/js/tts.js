@@ -99,6 +99,7 @@ class TTSManager {
             formData.append('ref_text', document.getElementById('refText').value);
             formData.append('voice_name', voiceName);
             formData.append('speed', speed);
+            formData.append('ref_audio_path', '/workspace/F5-TTS/wavs/about_star_trek.wav');
 
             console.log('Sending request to:', this.apiUrl);
             console.log('Form data:', {
