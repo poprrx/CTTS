@@ -90,8 +90,9 @@ class TTSManager {
             const saveResult = await saveResponse.json();
             const generationId = saveResult.id;
 
-            // Process text to add automatic pauses at commas
-            const processedText = this.addAutomaticPauses(genText);
+            // Process text to add automatic pauses at commas (if enabled)
+            const autoPauseEnabled = document.getElementById('autoPauseCheck').checked;
+            const processedText = autoPauseEnabled ? this.addAutomaticPauses(genText) : genText;
             
             const formData = new FormData();
             formData.append('gen_text', processedText);
@@ -109,7 +110,7 @@ class TTSManager {
 
             // Make API request with proper headers for CORS and timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for longer texts
             
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
@@ -352,9 +353,20 @@ class TTSManager {
     }
 
     addAutomaticPauses(text) {
-        // Only add pauses to significant commas (those followed by a space and capital letter or new clause)
-        // This reduces the number of SSML tags and prevents backend timeout
-        return text.replace(/,(\s+)(?=[A-Z]|and |or |but |which |that |when |where |who )/g, ',$1<break time="250ms"/>');
+        // Limit automatic pauses to prevent backend overload
+        // Only add pauses at sentence boundaries and major clause separators
+        let processed = text;
+        
+        // Add pauses after periods (but not abbreviations)
+        processed = processed.replace(/\.(\s+)(?=[A-Z])/g, '.$1<break time="400ms"/>');
+        
+        // Add pauses at major clause breaks only (limit to 5 total to prevent timeout)
+        const commaMatches = processed.match(/,(\s+)(?=[A-Z]|and |or |but |which |that )/g);
+        if (commaMatches && commaMatches.length <= 5) {
+            processed = processed.replace(/,(\s+)(?=[A-Z]|and |or |but |which |that )/g, ',$1<break time="200ms"/>');
+        }
+        
+        return processed;
     }
 }
 
