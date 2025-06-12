@@ -67,9 +67,12 @@ class TTSManager {
             this.hideAudioSection();
 
             // Collect form data
-            const genText = document.getElementById('genText').value;
+            let genText = document.getElementById('genText').value;
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
+            
+            // Add natural pauses at punctuation marks
+            genText = this.addNaturalPauses(genText);
             
             // Convert percentage to speed multiplier (0-200% -> 0.1-2.0x)
             // 0% = 0.1x, 100% = 1.0x, 200% = 2.0x
@@ -343,6 +346,22 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
+    }
+
+    addNaturalPauses(text) {
+        // Don't modify text that already has SSML break tags
+        if (text.includes('<break')) {
+            return text;
+        }
+        
+        // Add pauses at natural speech boundaries
+        return text
+            // Add short pause after commas
+            .replace(/,(\s)/g, '<break time="300ms"/>$1')
+            // Add medium pause after periods, exclamation marks, question marks
+            .replace(/([.!?])(\s)/g, '$1<break time="500ms"/>$2')
+            // Add pause after semicolons and colons
+            .replace(/([;:])(\s)/g, '$1<break time="400ms"/>$2');
     }
 }
 
