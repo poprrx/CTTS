@@ -66,14 +66,15 @@ class TTSManager {
             this.hideAudioSection();
 
             // Collect form data
-            const genText = document.getElementById('genText').value;
+            const rawText = document.getElementById('genText').value;
+            const genText = this.addCommaBreaks(rawText); // Add SSML breaks at commas
             const voiceName = document.getElementById('voiceSelect').value;
             const speedPercentage = parseInt(document.getElementById('speedSlider').value);
             const speed = Math.max(0.1, speedPercentage / 100); // Convert percentage to decimal, minimum 0.1
             
-            // Save generation to database before starting
+            // Save generation to database before starting (store original text without SSML)
             const generationData = {
-                text_input: genText,
+                text_input: rawText,
                 voice_name: voiceName,
                 speed: speedPercentage, // Store percentage in database
                 status: 'pending'
@@ -338,6 +339,11 @@ class TTSManager {
             `;
             historyList.appendChild(showMoreBtn);
         }
+    }
+
+    addCommaBreaks(text) {
+        // Replace commas with commas followed by SSML break tags
+        return text.replace(/,/g, ',<break time="500ms"/>');
     }
 }
 
